@@ -84,7 +84,7 @@ echo -e "\033[32mVim was installed.\033[0m"
 # wherever our .vimrc file goes.
 ###
 
-cat > .vimrc <<EOF
+cat > .vimrc <<'EOF'
 " general tweaks
 set nocompatible
 set ruler
