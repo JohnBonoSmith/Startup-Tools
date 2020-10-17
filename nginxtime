@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# This script will install and configure NGINX
+
+yum -y install epel-release
+yum -y install nginx
+systemctl start nginx
+
+firewall-cmd --permanent --zone=public --add-service=http
+firewall-cmd --permanent --zone=public --add-service=https
+firewall-cmd --reload
+
+systemctl enable nginx
+
+mkdir -p /var/www/john.onthebranch.com/html
+# Making our directory.  Eventually this may be variable
+
+# chown -R $USER:$USER /var/www/john.onthebranch.com/html
+# ^^code for if you ever need to do this as non-root user
+chmod -R 755 /var/www
+
+# Let's make our actual website content
+cat > /var/www/john.onthebranch.com/html/index.html <<EOF
+<html>
+  <head>
+    <title>John's Coding Play Project</title>
+  <head>
+  <body>
+    <h1>This is part of his project on understanding basic web hosting.</h1>
+  <body>
+<html>
+EOF
+
+mkdir /etc/nginx/sites-available
+mkdir /etc/nginx/sites-enabled
+
+sed -i.bak '37i\
+    include /etc/nginx/sites-enabled/*.conf;\n    server_names_hash_bucket_size 64;
+' /etc/nginx/nginx.conf
+
+nginx -t || exit -1
+# Tests that everything has been configured to this point.
+
+cp /etc/nginx/nginx.conf.default /etc/nginx/sites-available/john.onthebranch.com.conf
+
+sed -i.bak '35,116!d' /etc/nginx/sites-available/john.onthebranch.com.conf
+# ^^Deletes everything from our copied file that we don't want
+# -i applies rules to file, lines 35-116 get saved
+sed -i '3d;10d' /etc/nginx/sites-available/john.onthebranch.com.conf
+
+# Now let's add our server info
+sed -i '3i\
+        server_name john.onthebranch.com www.john.onthebranch.com;
+' /etc/nginx/sites-available/john.onthebranch.com.conf
+sed -i '10i\
+            root /var/www/john.onthebranch.com/html;
+' /etc/nginx/sites-available/john.onthebranch.com.conf
+sed -i '12i\
+            try_files $uri $uri/ =404;
+' /etc/nginx/sites-available/john.onthebranch.com.conf
+
+# Time to link Files
+ln -s /etc/nginx/sites-available/john.onthebranch.com.conf /etc/nginx/sites-enabled/john.onthebranch.com.conf
+
+systemctl restart nginx
+
+# Finally, some permissions
+chown -R nginx.nginx /var/www
+chmod 0644 /var/www/john.onthebranch.com/html/index.html
+chcon -Rt httpd_sys_content_t /var/www

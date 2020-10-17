@@ -1,0 +1,79 @@
+################################################
+# ----STEP 3, CONFIGURE VIM FOR GOOD TIMES-----#
+################################################
+
+#!/bin/bash
+
+if [ $UID != 0 ];
+then
+    echo "You must be root to run this script."
+    exit -1
+fi
+
+if [ ! -e /etc/redhat-release ];
+then
+    echo "This is only intended to be run on centos 7."
+    exit -1
+fi
+
+CENTOS_VERSION=`cut -b22 /etc/redhat-release`
+if [ $CENTOS_VERSION -ne 7 ];
+then
+    echo "This is only intended to be run on centos 7."
+    exit -1
+fi
+
+throw_error ( ) {
+    echo -e "\033[36mERROR: $1\033[0m"
+    exit -1
+}
+
+yum -y remove vim-enhanced vim-common vim-filesystem python2-pip
+
+yum -y install             \
+    ncurses                \
+    ncurses-devel          \
+    ctags                  \
+    git                    \
+    tcl-devel              \
+    ruby ruby-devel        \
+    lua lua-devel          \
+    luajit luajit-devel    \
+    python python-devel    \
+    python-setuptools      \
+    perl perl-devel        \
+    perl-ExtUtils-ParseXS  \
+    perl-ExtUtils-XSpp     \
+    perl-ExtUtils-CBuilder \
+    perl-ExtUtils-Embed
+
+yum -y groupinstall "Development Tools"
+
+git clone https://github.com/vim/vim.git
+cd vim
+./configure --with-features=huge  \
+    --enable-multibyte    \
+    --enable-rubyinterp   \
+    --enable-pythoninterp \
+    --enable-perlinterp   \
+    --enable-luainterp    \
+             || throw_error "The configure step failed."
+make         || throw_error "The make step failed."
+make install || throw_error "The make install step failed."
+
+# Install Ranger
+git clone https://github.com/hut/ranger.git
+cd ranger
+python setup.py install --optimize=1 --record=install_log.txt
+
+
+echo -e "\033[32mVim was installed.\033[0m"
+"
+" === END ROOT SCRIPT ===
+"
+" Now as a user, you'll want to:
+"
+" 1.  curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+" 2.  vim -c ':PlugInstall' -c ':q' -c ':q'
+" 3.  Modify ~/.vim/plugged/lightline.vim/autoload/lightline/colorscheme/powerlineish.vim
+
